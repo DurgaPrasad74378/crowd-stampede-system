@@ -1,6 +1,7 @@
 import cv2
 import json
 import asyncio
+import base64
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from ultralytics import YOLO
@@ -65,7 +66,7 @@ async def crowd_stream(websocket: WebSocket):
             person_count = len(boxes)
 
             # Uncomment the next line if you plan to stream or save the actual video frames later
-            # frame = anonymize_persons(frame, boxes) 
+            frame = anonymize_persons(frame, boxes) 
 
             # Basic risk calculation thresholds (adjust these based on your specific camera view)
             risk_status = "NORMAL"
@@ -74,10 +75,15 @@ async def crowd_stream(websocket: WebSocket):
             elif person_count > 8:
                 risk_status = "WARNING ⚠️"
 
+            # Compress the image to JPEG, then convert to a Base64 string
+            _, buffer = cv2.imencode('.jpg', frame)
+            frame_base64 = base64.b64encode(buffer).decode('utf-8')
+
             # Create the payload to send to the dashboard
             payload = {
                 "person_count": person_count,
                 "status": risk_status,
+                "frame": frame_base64
             }
             
             await websocket.send_text(json.dumps(payload))
