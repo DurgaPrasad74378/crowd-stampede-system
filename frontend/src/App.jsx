@@ -9,7 +9,7 @@ function App() {
   // It handles connecting to our Python backend in the background.
   useEffect(() => {
     // Connect to the FastAPI WebSocket backend (Make sure your FastAPI server is running!)
-    const ws = new WebSocket('ws://localhost:8000/ws/stream');
+    const ws = new WebSocket('wss://crowd-stampede-backend.onrender.com/ws/stream');
 
     ws.onopen = () => {
       console.log('Connected to Python Backend!');
