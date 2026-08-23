@@ -20,12 +20,7 @@ async def lifespan(app: FastAPI):
     print("Connecting to PostgreSQL...")
     try:
         # Connect to the database on startup
-        db_pool = await asyncpg.create_pool(
-            user='postgres', 
-            password=os.getenv("DB_PASSWORD"),
-            database='crowd_db', 
-            host='127.0.0.1'
-        )
+        db_pool = await asyncpg.create_pool(os.getenv("DATABASE_URL"))
         print("Connected to PostgreSQL successfully!")
     except Exception as e:
         print(f"Database connection error: {e}")
