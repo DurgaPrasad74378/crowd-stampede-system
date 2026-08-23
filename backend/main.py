@@ -5,8 +5,34 @@ import base64
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from ultralytics import YOLO
+import asyncpg
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="Crowd Stampede Early Warning API")
+db_pool = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global db_pool
+    print("Connecting to PostgreSQL...")
+    try:
+        # Connect to the database on startup
+        db_pool = await asyncpg.create_pool(
+            user='postgres', 
+            password='Durga@1234',
+            database='crowd_db', 
+            host='127.0.0.1'
+        )
+        print("Connected to PostgreSQL successfully!")
+    except Exception as e:
+        print(f"Database connection error: {e}")
+    
+    yield # Let the app run
+    
+    # Close the database pool on shutdown
+    if db_pool:
+        await db_pool.close()
+
+app = FastAPI(title="Crowd Stampede Early Warning API", lifespan=lifespan)
 
 # Allow the React frontend to connect to this API
 app.add_middleware(
@@ -87,6 +113,16 @@ async def crowd_stream(websocket: WebSocket):
             }
             
             await websocket.send_text(json.dumps(payload))
+            
+            if db_pool:
+                try:
+                    async with db_pool.acquire() as connection:
+                        await connection.execute(
+                            "INSERT INTO tracking_data (person_count, status) VALUES ($1, $2)",
+                            person_count, risk_status
+                        )
+                except Exception as e:
+                    print(f"Failed to insert data into DB: {e}")
             
             # Control the loop speed. 
             # 0.1 seconds = ~10 Frames Per Second (FPS), which is plenty for crowd monitoring and saves CPU.
