@@ -7,6 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from ultralytics import YOLO
 import asyncpg
 from contextlib import asynccontextmanager
+import os
+from dotenv import load_dotenv
+
+load_dotenv()  # Load environment variables from .env file
 
 db_pool = None
 
@@ -18,7 +22,7 @@ async def lifespan(app: FastAPI):
         # Connect to the database on startup
         db_pool = await asyncpg.create_pool(
             user='postgres', 
-            password='Durga@1234',
+            password=os.getenv("DB_PASSWORD"),
             database='crowd_db', 
             host='127.0.0.1'
         )
