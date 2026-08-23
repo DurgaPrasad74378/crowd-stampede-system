@@ -78,14 +78,14 @@ async def crowd_stream(websocket: WebSocket):
     # Initialize video capture. 
     # '0' uses your default webcam. 
     # If you want to test with a downloaded crowd video, change 0 to "path/to/video.mp4"
-    cap = cv2.VideoCapture(0) 
+    cap = cv2.VideoCapture('crowd.mp4') 
 
     try:
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
-                print("Failed to grab frame or end of video stream.")
-                break 
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                continue 
 
             # Run YOLOv8 detection targeting ONLY class 0 ('person')
             # verbose=False prevents the console from being spammed with log messages per frame
