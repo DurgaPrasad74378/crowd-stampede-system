@@ -9,7 +9,6 @@ import asyncpg
 from contextlib import asynccontextmanager
 import os
 import torch
-import imageio
 from dotenv import load_dotenv
 
 # Crucial fix for 502 Bad Gateway on Render Free Tier (Memory/CPU limits)
@@ -75,24 +74,28 @@ async def crowd_stream(websocket: WebSocket):
     """
     await websocket.accept()
     
-    # Use imageio to read the video because OpenCV on Render lacks FFmpeg codecs!
+    # Read the bundled video with OpenCV.
     video_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'crowd.mp4')
+    reader = None
     
     try:
-        print("DEBUG: Opening video with imageio...")
-        reader = imageio.get_reader(video_path, 'ffmpeg')
-        print("DEBUG: Video successfully opened with imageio!")
+        print("DEBUG: Opening video with OpenCV...")
+        reader = cv2.VideoCapture(video_path)
+        if not reader.isOpened():
+            raise RuntimeError(f"Unable to open video: {video_path}")
+        print("DEBUG: Video successfully opened with OpenCV!")
         
         # Loop forever so the stream never ends
         while True:
-            for frame_rgb in reader:
-                # Convert RGB (imageio format) to BGR (OpenCV format)
-                frame = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
+            success, frame = reader.read()
+            if not success:
+                reader.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                continue
 
-                # Run YOLOv8 detection in a background thread so it doesn't freeze the server!
-                # We use imgsz=320 (instead of 640) to drastically reduce RAM usage for the Free Tier
-                results_list = await asyncio.to_thread(model, frame, classes=[0], verbose=False, imgsz=320)
-                results = results_list[0]
+            # Run YOLOv8 detection in a background thread so it doesn't freeze the server!
+            # We use imgsz=320 (instead of 640) to drastically reduce RAM usage for the Free Tier
+            results_list = await asyncio.to_thread(model, frame, classes=[0], verbose=False, imgsz=320)
+            results = results_list[0]
             
             # Extract bounding boxes for detected people
             boxes = results.boxes
@@ -139,7 +142,5 @@ async def crowd_stream(websocket: WebSocket):
         print("React dashboard disconnected from the WebSocket stream.")
     finally:
         # Always release the camera resource when the connection closes
-        try:
-            reader.close()
-        except:
-            pass
+        if reader is not None:
+            reader.release()
