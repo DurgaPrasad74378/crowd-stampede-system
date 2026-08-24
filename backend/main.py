@@ -74,6 +74,7 @@ async def crowd_stream(websocket: WebSocket):
     # '0' uses your default webcam. 
     # If you want to test with a downloaded crowd video, change 0 to "path/to/video.mp4"
     cap = cv2.VideoCapture('crowd.mp4') 
+    print(f"DEBUG: Is video successfully opened? {cap.isOpened()}")
 
     try:
         while cap.isOpened():
