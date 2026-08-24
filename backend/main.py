@@ -88,9 +88,10 @@ async def crowd_stream(websocket: WebSocket):
                 cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                 continue 
 
-            # Run YOLOv8 detection targeting ONLY class 0 ('person')
-            # verbose=False prevents the console from being spammed with log messages per frame
-            results = model(frame, classes=[0], verbose=False)[0]
+            # Run YOLOv8 detection in a background thread so it doesn't freeze the server!
+            # We use imgsz=320 (instead of 640) to drastically reduce RAM usage for the Free Tier
+            results_list = await asyncio.to_thread(model, frame, classes=[0], verbose=False, imgsz=320)
+            results = results_list[0]
             
             # Extract bounding boxes for detected people
             boxes = results.boxes
@@ -130,8 +131,8 @@ async def crowd_stream(websocket: WebSocket):
                     print(f"Failed to insert data into DB: {e}")
             
             # Control the loop speed. 
-            # 0.1 seconds = ~10 Frames Per Second (FPS), which is plenty for crowd monitoring and saves CPU.
-            await asyncio.sleep(0.1) 
+            # 0.5 seconds = 2 Frames Per Second (FPS). Slower, but guarantees the free server won't crash!
+            await asyncio.sleep(0.5)
             
     except WebSocketDisconnect:
         print("React dashboard disconnected from the WebSocket stream.")
