@@ -8,7 +8,11 @@ from ultralytics import YOLO
 import asyncpg
 from contextlib import asynccontextmanager
 import os
+import torch
 from dotenv import load_dotenv
+
+# Crucial fix for 502 Bad Gateway on Render Free Tier (Memory/CPU limits)
+torch.set_num_threads(1)
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -74,6 +78,7 @@ async def crowd_stream(websocket: WebSocket):
     # '0' uses your default webcam. 
     # If you want to test with a downloaded crowd video, change 0 to "path/to/video.mp4"
     cap = cv2.VideoCapture('crowd.mp4') 
+    print(f"DEBUG: Video successfully opened? {cap.isOpened()}")
     print(f"DEBUG: Is video successfully opened? {cap.isOpened()}")
 
     try:
