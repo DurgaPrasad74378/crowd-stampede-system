@@ -26,6 +26,19 @@ async def lifespan(app: FastAPI):
         # Connect to the database on startup
         db_pool = await asyncpg.create_pool(os.getenv("DATABASE_URL"))
         print("Connected to PostgreSQL successfully!")
+
+        # Create the tracking_data table if it doesn't exist
+        async with db_pool.acquire() as connection:
+            await connection.execute('''
+                CREATE TABLE IF NOT EXISTS tracking_data (
+                    id SERIAL PRIMARY KEY,
+                    person_count INTEGER,
+                    status VARCHAR(50),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+        print("Database tables verified/created!")
+
     except Exception as e:
         print(f"Database connection error: {e}")
     
