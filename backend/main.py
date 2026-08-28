@@ -111,11 +111,16 @@ async def crowd_stream(websocket: WebSocket):
         while True:
             success, frame = reader.read()
             if not success:
-                reader.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                print("DEBUG: End of video or read error. Fully restarting the video stream...")
+                # The safest way to loop on Linux is to completely close and reopen the file
+                reader.release()
+                reader = cv2.VideoCapture(video_path)
+                await asyncio.sleep(1) # Safety pause to prevent freezing the server
                 continue
 
             # Run YOLOv8 detection in a background thread so it doesn't freeze the server!
-            # We use imgsz=320 (instead of 640) to drastically reduce RAM usage for the Free Tier
+            
+            # We use imgsz=160 (instead of 640) to drastically reduce RAM usage for the Free Tier
             results_list = await asyncio.to_thread(model, frame, classes=[0], verbose=False, imgsz=160)
             
             # Force memory cleanup after every frame
