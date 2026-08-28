@@ -1,3 +1,12 @@
+import os
+# AGGRESSIVE RAM LIMITS FOR RENDER FREE TIER
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
+import gc
 import cv2
 import json
 import asyncio
@@ -107,7 +116,11 @@ async def crowd_stream(websocket: WebSocket):
 
             # Run YOLOv8 detection in a background thread so it doesn't freeze the server!
             # We use imgsz=320 (instead of 640) to drastically reduce RAM usage for the Free Tier
-            results_list = await asyncio.to_thread(model, frame, classes=[0], verbose=False, imgsz=320)
+            results_list = await asyncio.to_thread(model, frame, classes=[0], verbose=False, imgsz=160)
+            
+            # Force memory cleanup after every frame
+            gc.collect()
+            
             results = results_list[0]
             
             # Extract bounding boxes for detected people
