@@ -35,8 +35,8 @@ async def lifespan(app: FastAPI):
     global db_pool
     print("Connecting to PostgreSQL...")
     try:
-        # Connect to the database on startup
-        db_pool = await asyncpg.create_pool(os.getenv("DATABASE_URL"))
+        # Connect to the database on startup (with a tiny pool size to save RAM on Render)
+        db_pool = await asyncpg.create_pool(os.getenv("DATABASE_URL"), min_size=1, max_size=2)
         print("Connected to PostgreSQL successfully!")
 
         # Create the tracking_data table if it doesn't exist
@@ -126,10 +126,14 @@ async def crowd_stream(websocket: WebSocket):
             else:
                 frame = np.zeros((720, 1280, 3), dtype=np.uint8)
 
+            print(f"DEBUG: Processing image {img_path}...")
+
             # Run YOLOv8 detection in a background thread so it doesn't freeze the server!
             
             # We use imgsz=160 (instead of 640) to drastically reduce RAM usage for the Free Tier
+            print("DEBUG: Running YOLO inference...")
             results_list = await asyncio.to_thread(model, frame, classes=[0], verbose=False, imgsz=160)
+            print("DEBUG: YOLO inference complete!")
             
             # Force memory cleanup after every frame
             gc.collect()
@@ -141,6 +145,7 @@ async def crowd_stream(websocket: WebSocket):
             person_count = len(boxes)
 
             # Uncomment the next line if you plan to stream or save the actual video frames later
+            print("DEBUG: Anonymizing persons...")
             frame = anonymize_persons(frame, boxes) 
 
             # Basic risk calculation thresholds (adjust these based on your specific camera view)
@@ -151,6 +156,7 @@ async def crowd_stream(websocket: WebSocket):
                 risk_status = "WARNING ⚠️"
 
             # Compress the image to JPEG, then convert to a Base64 string
+            print("DEBUG: Encoding image to base64...")
             _, buffer = cv2.imencode('.jpg', frame)
             frame_base64 = base64.b64encode(buffer).decode('utf-8')
 
@@ -161,6 +167,7 @@ async def crowd_stream(websocket: WebSocket):
                 "frame": frame_base64
             }
             
+            print("DEBUG: Sending payload to WebSocket...")
             await websocket.send_text(json.dumps(payload))
             
             if db_pool:
