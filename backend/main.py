@@ -118,6 +118,8 @@ async def crowd_stream(websocket: WebSocket):
             if img_path:
                 frame = cv2.imread(img_path)
                 if frame is None:
+                    print(f"DEBUG: Failed to read image {img_path}. Skipping...")
+                    await asyncio.sleep(1)
                     continue
                 # Resize high-resolution Pexels images to 720p so we don't crash the WebSocket connection!
                 frame = cv2.resize(frame, (1280, 720))
