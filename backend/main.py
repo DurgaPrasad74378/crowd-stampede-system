@@ -77,11 +77,14 @@ model = YOLO("yolov8n.pt")
 
 def anonymize_persons(frame, boxes):
     """
-    Applies a heavy Gaussian blur to detected persons to maintain privacy by design.
-    This ensures no identifiable facial or biometric data is processed downstream.
+    Draws a bounding box and applies a heavy Gaussian blur to detected persons.
     """
     for box in boxes:
         x1, y1, x2, y2 = map(int, box.xyxy[0])
+        
+        # Draw a bright green bounding box so it is clearly visible!
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 3)
+        
         # Extract the region of interest (the detected person)
         roi = frame[y1:y2, x1:x2]
         
@@ -130,9 +133,9 @@ async def crowd_stream(websocket: WebSocket):
 
             # Run YOLOv8 detection in a background thread so it doesn't freeze the server!
             
-            # We use imgsz=160 (instead of 640) to drastically reduce RAM usage for the Free Tier
+            # We use imgsz=640 because we now have plenty of RAM after switching to CPU-only PyTorch!
             print("DEBUG: Running YOLO inference...")
-            results_list = await asyncio.to_thread(model, frame, classes=[0], verbose=False, imgsz=160)
+            results_list = await asyncio.to_thread(model, frame, classes=[0], verbose=False, imgsz=640)
             print("DEBUG: YOLO inference complete!")
             
             # Force memory cleanup after every frame
