@@ -11,6 +11,9 @@ import cv2
 import json
 import asyncio
 import base64
+import glob
+import itertools
+import numpy as np
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from ultralytics import YOLO
@@ -96,27 +99,28 @@ async def crowd_stream(websocket: WebSocket):
     """
     await websocket.accept()
     
-    # Read the bundled video with OpenCV.
-    video_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'crowd.mp4')
-    reader = None
+    # Read static images from the 'images' folder.
+    images_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'images')
+    image_paths = sorted(glob.glob(os.path.join(images_dir, '*.jpg'))) + sorted(glob.glob(os.path.join(images_dir, '*.png')))
     
     try:
-        print("DEBUG: Opening video with OpenCV...")
-        reader = cv2.VideoCapture(video_path)
-        if not reader.isOpened():
-            raise RuntimeError(f"Unable to open video: {video_path}")
-        print("DEBUG: Video successfully opened with OpenCV!")
+        if not image_paths:
+            print(f"DEBUG: No images found in {images_dir}. Please add some .jpg files!")
+            # Fallback to an empty black frame if no images are present
+            image_cycle = itertools.cycle([None])
+        else:
+            print(f"DEBUG: Found {len(image_paths)} images! Cycling through them...")
+            image_cycle = itertools.cycle(image_paths)
         
         # Loop forever so the stream never ends
         while True:
-            success, frame = reader.read()
-            if not success:
-                print("DEBUG: End of video or read error. Fully restarting the video stream...")
-                # The safest way to loop on Linux is to completely close and reopen the file
-                reader.release()
-                reader = cv2.VideoCapture(video_path)
-                await asyncio.sleep(1) # Safety pause to prevent freezing the server
-                continue
+            img_path = next(image_cycle)
+            if img_path:
+                frame = cv2.imread(img_path)
+                if frame is None:
+                    continue
+            else:
+                frame = np.zeros((480, 640, 3), dtype=np.uint8)
 
             # Run YOLOv8 detection in a background thread so it doesn't freeze the server!
             
@@ -166,12 +170,10 @@ async def crowd_stream(websocket: WebSocket):
                     print(f"Failed to insert data into DB: {e}")
             
             # Control the loop speed. 
-            # 0.5 seconds = 2 Frames Per Second (FPS). Slower, but guarantees the free server won't crash!
-            await asyncio.sleep(0.5)
+            # Show each image for 3 seconds so you have time to see and compare the crowd density!
+            await asyncio.sleep(3)
             
     except WebSocketDisconnect:
         print("React dashboard disconnected from the WebSocket stream.")
     finally:
-        # Always release the camera resource when the connection closes
-        if reader is not None:
-            reader.release()
+        pass
