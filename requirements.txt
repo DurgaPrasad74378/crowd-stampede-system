@@ -3,5 +3,6 @@ uvicorn[standard]
 ultralytics
 asyncpg
 python-dotenv
-opencv-python-headless
+opencv-python-headless==4.9.0.80
 imageio[ffmpeg]
+numpy<2
