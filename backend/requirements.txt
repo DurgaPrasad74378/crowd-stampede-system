@@ -1,7 +1,0 @@
-fastapi
-uvicorn[standard]
-ultralytics
-asyncpg
-python-dotenv
-opencv-python-headless
-imageio[ffmpeg]
