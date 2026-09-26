@@ -104,7 +104,7 @@ function App() {
               <div className="text-center space-y-3">
                 <div className="w-10 h-10 border-4 border-gray-700 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
                 <p className="text-gray-400 font-medium text-sm">
-                  {status === 'Disconnected' || status === 'Connecting...' ? 'Start your FastAPI backend to connect...' : 'Waiting for video stream...'}
+                  {status === 'Disconnected' || status === 'Connecting...' ? 'Start your FastAPI backend to connect...' : 'Waiting for image stream...'}
                 </p>
               </div>
             )}
