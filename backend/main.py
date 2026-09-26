@@ -119,8 +119,10 @@ async def crowd_stream(websocket: WebSocket):
                 frame = cv2.imread(img_path)
                 if frame is None:
                     continue
+                # Resize high-resolution Pexels images to 720p so we don't crash the WebSocket connection!
+                frame = cv2.resize(frame, (1280, 720))
             else:
-                frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                frame = np.zeros((720, 1280, 3), dtype=np.uint8)
 
             # Run YOLOv8 detection in a background thread so it doesn't freeze the server!
             
