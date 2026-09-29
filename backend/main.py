@@ -134,8 +134,9 @@ async def crowd_stream(websocket: WebSocket):
             # Run YOLOv8 detection in a background thread so it doesn't freeze the server!
             
             # We use imgsz=640 because we now have plenty of RAM after switching to CPU-only PyTorch!
+            # We also lower the confidence threshold to 0.15 so it detects people in dark shadows and B&W photos!
             print("DEBUG: Running YOLO inference...")
-            results_list = await asyncio.to_thread(model, frame, classes=[0], verbose=False, imgsz=640)
+            results_list = await asyncio.to_thread(model, frame, classes=[0], conf=0.15, verbose=False, imgsz=640)
             print("DEBUG: YOLO inference complete!")
             
             # Force memory cleanup after every frame
